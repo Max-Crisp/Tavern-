@@ -6,10 +6,13 @@ const mongoUri = process.env.MONGO_URI as string;
 
 export const connectDB = async () => {
   try {
-    await mongoose.connect(mongoUri);
-    console.log('MongoDB connected');
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 3000, // Fail fast if MongoDB is not available
+    });
+    console.log('✅ MongoDB connected');
   } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
+    console.warn('⚠️  MongoDB connection failed:', err instanceof Error ? err.message : err);
+    console.warn('⚠️  Server will start without database. Please start MongoDB or configure Atlas.');
+    // Don't exit - allow server to start for testing API structure
   }
 };
