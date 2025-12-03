@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 type Role = "ADVENTURER" | "NPC" | "GUILD_MASTER";
 
 type RegisterForm = {
-  id: string;
   email: string;
   username: string;
   displayName: string;
@@ -18,7 +17,6 @@ export default function Register() {
   const { register: registerUser } = useAuth();
 
   const [form, setForm] = useState<RegisterForm>({
-    id: "",
     email: "",
     username: "",
     displayName: "",
@@ -44,12 +42,6 @@ export default function Register() {
       <form onSubmit={submit} className="w-full max-w-md space-y-3 bg-white p-6 rounded-xl shadow">
         <h1 className="text-2xl font-bold">Create your Tavern account</h1>
 
-        <input
-          className="input"
-          placeholder="ID (e.g., hero-1)"
-          value={form.id}
-          onChange={(e) => setForm({ ...form, id: e.target.value })}
-        />
         <input
           className="input"
           placeholder="Email"

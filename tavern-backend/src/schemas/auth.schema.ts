@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const registerSchema = z.object({
-  id: z.string().min(1, 'id is required'),                 // maps to _id
+  id: z.string().min(1, 'id is required').optional(),     // maps to _id, optional for auto-generation
   email: z.string().email(),
   username: z.string().min(3),
   displayName: z.string().min(1),
