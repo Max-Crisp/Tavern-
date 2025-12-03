@@ -1,7 +1,7 @@
 // src/models/user.model.ts
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document } from "mongoose";
 
-export type UserRole = 'ADVENTURER' | 'NPC' | 'GUILD_MASTER';
+export type UserRole = "ADVENTURER" | "NPC" | "GUILD_MASTER";
 
 export interface IUser extends Document {
   email: string;
@@ -9,6 +9,7 @@ export interface IUser extends Document {
   displayName: string;
   avatarUrl?: string;
   role: UserRole;
+  password: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,11 +22,13 @@ const UserSchema = new Schema<IUser>(
     avatarUrl: { type: String },
     role: {
       type: String,
-      enum: ['ADVENTURER', 'NPC', 'GUILD_MASTER'],
-      default: 'ADVENTURER',
+      enum: ["ADVENTURER", "NPC", "GUILD_MASTER"],
+      default: "ADVENTURER",
     },
+    password: { type: String, required: true },
   },
   { timestamps: true }
 );
 
-export const UserModel = model<IUser>('User', UserSchema);
+export const UserModel = model<IUser>("User", UserSchema);
+
