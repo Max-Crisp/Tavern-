@@ -117,12 +117,10 @@ async function deleteRequest<T>(path: string, token: string): Promise<T> {
     throw new Error(await res.text());
   }
 
-  // some delete handlers may return no body
   try {
     return (await res.json()) as T;
   } catch {
-    // @ts-expect-error - caller should handle undefined when using delete
-    return undefined;
+    return undefined as unknown as T;
   }
 }
 
@@ -161,17 +159,20 @@ export default function AdventurerProfileManager() {
           title: res.data.title,
           summary: res.data.summary,
           charClass: res.data.class,
-          level: res.data.level,
+          level: res.data.level, // level still tracked, but not editable by player
           race: res.data.race ?? "",
           background: res.data.background ?? "",
           attributes: res.data.attributes,
         });
       } catch (err: unknown) {
-        if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
+        const l = msg.toLowerCase();
 
-        // If profile does not exist yet, backend sends message like "Adventurer profile not found"
-        if (msg.toLowerCase().includes("adventurer profile not found")) {
+        if (
+          l.includes("no adventurer profile found") ||
+          l.includes("adventurer profile not found")
+        ) {
+          // new adventurer, start at level 1
           setProfile(null);
           setForm(emptyForm);
         } else {
@@ -214,11 +215,12 @@ export default function AdventurerProfileManager() {
     setSavingProfile(true);
     setError(null);
 
+    // NOTE: we still send level, but player cannot change it in the UI.
     const payload = {
       title: form.title,
       summary: form.summary,
       class: form.charClass,
-      level: Number(form.level),
+      level: form.level, // stays 1 unless backend/admin updates it
       race: form.race || undefined,
       background: form.background || undefined,
       attributes: form.attributes,
@@ -227,14 +229,12 @@ export default function AdventurerProfileManager() {
     try {
       let res: ApiResponse<AdventurerProfile>;
       if (!profile) {
-        // create
         res = await api.post<ApiResponse<AdventurerProfile>>(
           "/adventurers/me",
           payload,
           token
         );
       } else {
-        // update
         res = await patchJson<ApiResponse<AdventurerProfile>>(
           "/adventurers/me",
           payload,
@@ -242,7 +242,8 @@ export default function AdventurerProfileManager() {
         );
       }
       setProfile(res.data);
-      setError(null);
+      // keep form in sync, including possibly updated level from backend
+      setForm((prev) => ({ ...prev, level: res.data.level }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -301,10 +302,9 @@ export default function AdventurerProfileManager() {
         `/adventurers/me/skills/${skillId}`,
         token
       );
-      if (res && res.data) {
-        setProfile(res.data);
+      if (res && (res as any).data) {
+        setProfile((res as ApiResponse<AdventurerProfile>).data);
       } else {
-        // If backend returns nothing, refetch
         const refreshed = await api.get<ApiResponse<AdventurerProfile>>(
           "/adventurers/me",
           token
@@ -334,184 +334,221 @@ export default function AdventurerProfileManager() {
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <section className="mt-6 space-y-6">
+    <section className="mt-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
           🧝 Adventurer Profile & Skills
         </h2>
         {loading && (
-          <span className="text-sm text-gray-500">Loading profile...</span>
+          <span className="text-sm text-slate-300">
+            Consulting the guild records…
+          </span>
         )}
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div className="rounded-lg border border-red-500/60 bg-red-900/40 px-4 py-3 text-red-100 shadow">
+          ⚠️ {error}
         </div>
       )}
 
-      {/* Profile form */}
+      {/* Current profile card – parchment style */}
+      {profile && (
+        <div className="rounded-2xl border border-amber-700 bg-[#fdf3d0] text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-2">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            📜 Current Profile
+          </h3>
+          <p>
+            <b>Title:</b> {profile.title}
+          </p>
+          <p>
+            <b>Class:</b> {profile.class} <span className="mx-2">|</span>{" "}
+            <b>Level:</b> {profile.level}
+          </p>
+          {profile.race && (
+            <p>
+              <b>Race:</b> {profile.race}
+            </p>
+          )}
+          {profile.background && (
+            <p>
+              <b>Background:</b> {profile.background}
+            </p>
+          )}
+          {profile.summary && (
+            <p>
+              <b>Summary:</b> {profile.summary}
+            </p>
+          )}
+
+          <div className="grid grid-cols-3 gap-2 mt-3 text-sm font-semibold">
+            <p>STR: {profile.attributes.strength}</p>
+            <p>DEX: {profile.attributes.dexterity}</p>
+            <p>INT: {profile.attributes.intelligence}</p>
+            <p>CHA: {profile.attributes.charisma}</p>
+            <p>VIT: {profile.attributes.vitality}</p>
+            <p>LUCK: {profile.attributes.luck}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Profile form – parchment card */}
       <form
         onSubmit={handleProfileSubmit}
-        className="space-y-4 rounded-xl border bg-white p-4 shadow-sm"
+        className="rounded-2xl border border-amber-700 bg-[#fdf3d0]/95 text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-4"
       >
-        <h3 className="font-semibold">Profile details</h3>
-        <div className="grid gap-3 md:grid-cols-2">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          ✒️ Edit / Create Adventurer Profile
+        </h3>
+
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Title
-            </label>
+            <label className="text-sm font-semibold">Title</label>
             <input
-              className="input"
+              className="input bg-amber-50"
               name="title"
+              placeholder="Dragon Slayer"
               value={form.title}
               onChange={handleProfileChange}
-              placeholder="Dragon Slayer"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Class
-            </label>
+            <label className="text-sm font-semibold">Class</label>
             <input
-              className="input"
+              className="input bg-amber-50"
               name="charClass"
+              placeholder="Warrior"
               value={form.charClass}
               onChange={handleProfileChange}
-              placeholder="Warrior"
               required
             />
           </div>
+
+          {/* 🔒 Level is read-only: player sees it, but cannot edit */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Level
-            </label>
-            <input
-              className="input"
-              type="number"
-              min={1}
-              name="level"
-              value={form.level}
-              onChange={handleProfileChange}
-              required
-            />
+            <label className="text-sm font-semibold">Level</label>
+            <div className="input bg-amber-100/80 flex items-center h-[42px] text-sm">
+              <span className="font-medium mr-1">{form.level}</span>
+              <span className="text-xs text-slate-600">
+                (increases via quests / guild actions)
+              </span>
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Race
-            </label>
+            <label className="text-sm font-semibold">Race</label>
             <input
-              className="input"
+              className="input bg-amber-50"
               name="race"
+              placeholder="Human, Elf…"
               value={form.race}
               onChange={handleProfileChange}
-              placeholder="Human, Elf..."
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Background
-          </label>
+          <label className="text-sm font-semibold">Background</label>
           <textarea
-            className="input min-h-[80px]"
+            className="input bg-amber-50 min-h-[70px]"
             name="background"
+            placeholder="Former knight of the Eastern Kingdom…"
             value={form.background}
             onChange={handleProfileChange}
-            placeholder="Former knight of the Eastern Kingdom..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Summary
-          </label>
+          <label className="text-sm font-semibold">Summary</label>
           <textarea
-            className="input min-h-[80px]"
+            className="input bg-amber-50 min-h-[70px]"
             name="summary"
+            placeholder="Veteran warrior who hunts dragons…"
             value={form.summary}
             onChange={handleProfileChange}
-            placeholder="Veteran warrior who hunts dragons..."
             required
           />
         </div>
 
         <div>
-          <h4 className="mb-2 text-sm font-medium">Core attributes</h4>
-          <div className="grid gap-3 md:grid-cols-3">
-            {(
-              Object.keys(form.attributes) as Array<keyof Attributes>
-            ).map((key) => (
-              <div key={key}>
-                <label className="block text-sm font-medium mb-1 capitalize">
-                  {key}
-                </label>
-                <input
-                  className="input"
-                  type="number"
-                  name={key}
-                  min={1}
-                  max={20}
-                  value={form.attributes[key]}
-                  onChange={handleProfileChange}
-                />
-              </div>
-            ))}
+          <h4 className="font-semibold mb-2">💠 Core Attributes</h4>
+          <div className="grid md:grid-cols-3 gap-3">
+            {(Object.keys(form.attributes) as Array<keyof Attributes>).map(
+              (key) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold uppercase tracking-wide">
+                    {key}
+                  </label>
+                  <input
+                    className="input bg-amber-50"
+                    type="number"
+                    name={key}
+                    value={form.attributes[key]}
+                    onChange={handleProfileChange}
+                  />
+                </div>
+              )
+            )}
           </div>
         </div>
 
-        <button className="btn" type="submit" disabled={savingProfile}>
+        <button
+          className="btn bg-amber-700 hover:bg-amber-800 text-white"
+          type="submit"
+          disabled={savingProfile}
+        >
           {savingProfile
-            ? "Saving..."
+            ? "Saving…"
             : profile
-            ? "Update profile"
-            : "Create profile"}
+            ? "Update Profile"
+            : "Create Profile"}
         </button>
       </form>
 
       {/* Skills section */}
-      <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-        <div className="space-y-3 rounded-xl border bg-white p-4 shadow-sm">
-          <h3 className="font-semibold mb-2">Skills</h3>
+      <div className="grid md:grid-cols-[2fr,1fr] gap-6">
+        {/* Skills list – dark magical card */}
+        <div className="rounded-2xl border border-purple-500/60 bg-slate-900/80 text-slate-100 shadow-lg shadow-purple-900/40 p-5">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            ✨ Learned Skills
+          </h3>
           {profile && profile.skills.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No skills yet. Add your first skill using the form on the right.
+            <p className="text-sm text-slate-300">
+              No skills yet — record your first technique in the tome on the
+              right.
             </p>
           )}
           {profile && profile.skills.length > 0 && (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {profile.skills.map((skill) => (
                 <li
                   key={skill._id}
-                  className="flex items-start justify-between rounded-lg border px-3 py-2"
+                  className="flex items-start justify-between rounded-xl border border-purple-500/40 bg-slate-900/90 px-3 py-2"
                 >
                   <div>
-                    <div className="font-medium">
+                    <div className="font-semibold">
                       {skill.name}{" "}
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-purple-200">
                         (Lv. {skill.level}
                         {skill.category ? ` · ${skill.category}` : ""})
                       </span>
                     </div>
                     {skill.description && (
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-slate-200">
                         {skill.description}
                       </p>
                     )}
                     {skill.cooldown && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-slate-400">
                         Cooldown: {skill.cooldown}
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-1">
                     <button
                       type="button"
                       className="btn px-3 py-1 text-xs"
@@ -521,7 +558,7 @@ export default function AdventurerProfileManager() {
                     </button>
                     <button
                       type="button"
-                      className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700"
+                      className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
                       onClick={() => void handleDeleteSkill(skill._id)}
                     >
                       Remove
@@ -533,17 +570,18 @@ export default function AdventurerProfileManager() {
           )}
         </div>
 
+        {/* Add skill – spellbook card */}
         <form
           onSubmit={handleAddSkill}
-          className="space-y-3 rounded-xl border bg-white p-4 shadow-sm"
+          className="rounded-2xl border border-purple-500/60 bg-slate-900/80 text-slate-100 shadow-lg shadow-purple-900/40 p-5 space-y-3"
         >
-          <h3 className="font-semibold">Add new skill</h3>
+          <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+            📖 Record New Skill
+          </h3>
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Name
-            </label>
+            <label className="text-sm font-semibold">Name</label>
             <input
-              className="input"
+              className="input bg-slate-800"
               name="name"
               value={skillForm.name}
               onChange={handleSkillChange}
@@ -552,24 +590,20 @@ export default function AdventurerProfileManager() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Description
-            </label>
+            <label className="text-sm font-semibold">Description</label>
             <textarea
-              className="input min-h-[60px]"
+              className="input bg-slate-800 min-h-[60px]"
               name="description"
               value={skillForm.description}
               onChange={handleSkillChange}
               placeholder="Throws a fiery ball of doom."
             />
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Level
-              </label>
+              <label className="text-sm font-semibold">Level</label>
               <input
-                className="input"
+                className="input bg-slate-800"
                 type="number"
                 min={1}
                 max={10}
@@ -579,23 +613,19 @@ export default function AdventurerProfileManager() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Category
-              </label>
+              <label className="text-sm font-semibold">Category</label>
               <input
-                className="input"
+                className="input bg-slate-800"
                 name="category"
                 value={skillForm.category}
                 onChange={handleSkillChange}
-                placeholder="Magic, Combat..."
+                placeholder="Magic, Combat…"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Cooldown
-              </label>
+              <label className="text-sm font-semibold">Cooldown</label>
               <input
-                className="input"
+                className="input bg-slate-800"
                 name="cooldown"
                 value={skillForm.cooldown}
                 onChange={handleSkillChange}
@@ -603,11 +633,16 @@ export default function AdventurerProfileManager() {
               />
             </div>
           </div>
-          <button className="btn w-full" type="submit" disabled={savingSkill}>
-            {savingSkill ? "Adding..." : "Add skill"}
+          <button
+            className="btn w-full bg-purple-600 hover:bg-purple-700 text-white"
+            type="submit"
+            disabled={savingSkill}
+          >
+            {savingSkill ? "Inscribing…" : "Add Skill"}
           </button>
         </form>
       </div>
     </section>
   );
 }
+
