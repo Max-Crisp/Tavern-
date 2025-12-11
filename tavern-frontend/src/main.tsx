@@ -7,6 +7,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
+import AdventurerLeaderboard from "./pages/AdventurerLeaderboard";
+
 
 const router = createBrowserRouter([
   // public routes
@@ -19,6 +21,14 @@ const router = createBrowserRouter([
     element: (
       <Protected>
         <Dashboard />
+      </Protected>
+    ),
+  },
+  {
+    path: "/leaderboard",
+    element: (
+      <Protected>
+        <AdventurerLeaderboard />
       </Protected>
     ),
   },

@@ -1,11 +1,15 @@
+// src/pages/Dashboard.tsx
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AdventurerProfileManager from "../components/AdventurerProfileManager";
+import { useWorkload } from "../hooks/useWorkload";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { data: workload } = useWorkload();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-100">
+    <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-950 to-black text-slate-100">
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <header className="flex items-center justify-between">
@@ -17,12 +21,20 @@ export default function Dashboard() {
               Welcome to the guild hall, {user?.displayName || "traveler"}.
             </p>
           </div>
-          <button
-            className="btn bg-red-700 hover:bg-red-800 text-sm px-4 py-2"
-            onClick={logout}
-          >
-            Leave Tavern
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/leaderboard"
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-sky-500/60 text-sky-300 hover:bg-sky-500/10"
+            >
+              🏆 Leaderboard
+            </Link>
+            <button
+              className="btn bg-red-700 hover:bg-red-800 text-sm px-4 py-2"
+              onClick={logout}
+            >
+              Leave Tavern
+            </button>
+          </div>
         </header>
 
         {/* Basic user info (guild record) */}
@@ -47,13 +59,40 @@ export default function Dashboard() {
           </p>
         </section>
 
+        {/* Workload / burnout status */}
+        <section className="rounded-2xl border border-sky-500/40 bg-slate-900/70 p-4 md:p-5 space-y-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            🧠 Workload & Burnout Watch
+          </h2>
+          {workload ? (
+            <>
+              <p className="text-sm text-slate-200">
+                Active quests:{" "}
+                <span className="font-semibold">
+                  {workload.activeCount} / {workload.maxActive}
+                </span>
+              </p>
+              <p
+                className={
+                  "text-sm " +
+                  (workload.status === "OK"
+                    ? "text-emerald-400"
+                    : workload.status === "WARNING"
+                    ? "text-amber-400"
+                    : "text-red-400")
+                }
+              >
+                {workload.message}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-400">Checking your workload…</p>
+          )}
+        </section>
+
         {/* Feature 1: Adventurer profile & skills */}
         <AdventurerProfileManager />
       </div>
     </div>
   );
 }
-
-
-
-
