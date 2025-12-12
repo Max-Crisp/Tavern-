@@ -1,4 +1,3 @@
-// tavern-backend/src/models/Transaction.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export enum TransactionType {
@@ -87,7 +86,6 @@ const TransactionSchema: Schema = new Schema(
   }
 );
 
-// Indexes for efficient queries
 TransactionSchema.index({ userId: 1, createdAt: -1 });
 TransactionSchema.index({ status: 1, type: 1 });
 TransactionSchema.index({ transactionId: 1 });
