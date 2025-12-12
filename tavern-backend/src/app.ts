@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { apiRateLimiter } from "./middleware/rateLimit";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import routes from "./routes";
+import paymentRoutes from './routes/paymentRoutes';
 
 const app = express();
 
@@ -22,5 +23,7 @@ app.use("/api", routes);
 // 404 + error handlers
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+app.use('/api/payments', paymentRoutes)
 
 export default app;
