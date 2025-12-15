@@ -1,4 +1,4 @@
-// src/app.ts
+// tavern-backend/src/app.ts
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
@@ -19,11 +19,10 @@ app.use("/api", apiRateLimiter);
 
 // Mount all routes under /api
 app.use("/api", routes);
+app.use('/api/payments', paymentRoutes); // ← MOVED BEFORE ERROR HANDLERS
 
-// 404 + error handlers
+// 404 + error handlers (MUST BE LAST)
 app.use(notFoundHandler);
 app.use(errorHandler);
-
-app.use('/api/payments', paymentRoutes)
 
 export default app;
