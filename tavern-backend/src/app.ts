@@ -5,7 +5,6 @@ import morgan from "morgan";
 import { apiRateLimiter } from "./middleware/rateLimit";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware";
 import routes from "./routes";
-import paymentRoutes from './routes/paymentRoutes';
 
 const app = express();
 
@@ -17,9 +16,8 @@ app.use(morgan("dev"));
 // Rate limit all API routes
 app.use("/api", apiRateLimiter);
 
-// Mount all routes under /api
+// Mount all routes under /api (payments are now included in routes/index.ts)
 app.use("/api", routes);
-app.use('/api/payments', paymentRoutes); // ← MOVED BEFORE ERROR HANDLERS
 
 // 404 + error handlers (MUST BE LAST)
 app.use(notFoundHandler);
