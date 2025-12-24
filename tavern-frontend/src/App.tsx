@@ -3,13 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { PaymentLedger } from './components/PaymentLedger';
 import './App.css';
 
-// Import your existing pages (adjust paths as needed)
-// Uncomment these if you have these files:
-// import Login from './pages/Login';
-// import Register from './pages/Register';
-// import Dashboard from './pages/Dashboard';
-
-// Temporary placeholder components (remove these when you have real pages)
+// Placeholder components
 function Login() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -37,14 +31,22 @@ function Dashboard() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <p className="text-gray-600 mb-4">Welcome to your dashboard!</p>
-          <a 
-            href="/ledger" 
-            className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            View Payment Ledger
-          </a>
+        <div className="bg-white p-6 rounded-lg shadow space-y-4">
+          <p className="text-gray-600">Welcome to your dashboard!</p>
+          <div className="flex gap-4">
+            <a 
+              href="/ledger" 
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              View Payment Ledger
+            </a>
+            <a 
+              href="/payments" 
+              className="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Manage Payments
+            </a>
+          </div>
         </div>
       </div>
     </div>
