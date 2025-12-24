@@ -2,6 +2,10 @@
 import "dotenv/config";
 import app from "./app";
 import { connectDB } from "./config/db.config";
+import cors from 'cors';
+import paymentRoutes from './routes/paymentRoutes';
+
+
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -23,5 +27,11 @@ const start = async () => {
     process.exit(1);
   }
 };
+app.use('/api/payments', paymentRoutes);
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 
 start();
